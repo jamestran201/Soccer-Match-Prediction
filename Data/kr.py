@@ -30,7 +30,7 @@ for line in inf:
         if not currentSet == previousSet:
             if len(games) != 0:
                 games[size].append(whichWin(games[size]))
-            games.append([[0 for i in range(7 + 15 + 4 + 13)],[0 for i in range(7 + 15 + 4 + 13)]])
+            games.append([[0 for i in range(5 + 15 + 4 + 13)],[0 for i in range(5 + 15 + 4 + 13)]])
             previousSet = currentSet
         data = clense(data)
         #print(data)
@@ -42,18 +42,19 @@ for line in inf:
         if int(data[19]) != 0:
             games[size][side][3] += 1
         games[size][side][5] += (int(data[21]))
-        games[size][side][int(data[5])  + 6] += 1
-        games[size][side][int(data[20]) + 6 + 15] += 1
-        games[size][side][int(data[14]) + 6 + 15 + 4] += 1
+        games[size][side][int(data[5]) + 5 - 1] += 1
+        games[size][side][int(data[20]) + 5 + 15 - 1] += 1
+        games[size][side][int(data[14]) + 5 + 15 + 4 - 1] += 1
 
 print("events, shots made, is goal, assist count, fast break", file = outf, end = ",")
 print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outf, end = ",")
 print("s1,s2,s3,s4", file=outf, end = ",")
 print("sp1,sp2,sp3,sp4,sp5,sp6,sp7,sp8,sp9,sp10,sp11,sp12,sp13", file=outf, end = ",")
 print("events 2, shots made 2, is goal 2, assist count 2, fast break 2", file=outf, end = ",")
-print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15,TARGET", file=outf, end=",") 
+print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outf, end=",") 
 print("s1,s2,s3,s4", file=outf, end = ",")
-print("sp1,sp2,sp3,sp4,sp5,sp6,sp7,sp8,sp9,sp10,sp11,sp12,sp13", file=outf)
+print("sp1,sp2,sp3,sp4,sp5,sp6,sp7,sp8,sp9,sp10,sp11,sp12,sp13", file=outf, end=",")
+print("target Feature", file=outf)
 
 
 for game in games:
