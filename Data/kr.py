@@ -54,6 +54,11 @@ for line in inf:
         if int(data[19]) != 0:
             scores[side] += 1
 
+# Add the target feature for the last match
+size = len(games) - 1
+if len(games) != 0:
+    games[size].append(whichWin(scores))
+
 print("events, shots made, is goal, assist count, fast break", file = outf, end = ",")
 print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outf, end = ",")
 print("s1,s2,s3,s4", file=outf, end = ",")
