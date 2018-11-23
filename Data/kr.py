@@ -12,15 +12,16 @@ def clense(d):
 
 inf = open("events.csv", "r", encoding="utf8")
 outf = open("formated.csv", "w+", encoding="utf8")
+outft = open("formatedTesting.csv", "w+", encoding="utf-8")
 games = []
 previousSet = {}
 inf.readline()
 
 def whichWin(d):
-    if d[0][3] == d[1][3]:
+    if d[0][3] > d[1][3]:
+        return 1
+    elif d[0][3] == d[1][3]:
         return 2
-    elif d[0][3] > d[1][3]:
-    	return 1 
     return 0
 
 for line in inf:
@@ -34,24 +35,20 @@ for line in inf:
                 games[size].append(whichWin(games[size]))
             games.append([[0 for i in range(5 + 15 + 4 + 13)],[0 for i in range(5 + 15 + 4 + 13)]])
             previousSet = currentSet
-        data = clense(data)
-        #print(data)
-        size = len(games) - 1
-        games[size][side][0] += 1
-        if int(data[15]) != 0:
-            games[size][side][1] += 1
-        games[size][side][2] += (int(data[16]))
-        if int(data[19]) != 0:
-            games[size][side][3] += 1
-        games[size][side][5] += (int(data[21]))
-        games[size][side][int(data[5]) + 5 - 1] += 1
-        games[size][side][int(data[20]) + 5 + 15 - 1] += 1
-        games[size][side][int(data[14]) + 5 + 15 + 4 - 1] += 1
-
-# Add the target feature for the last match
-size = len(games) - 1
-if len(games) != 0:
-	games[size].append(whichWin(games[size]))
+        if len(games) < (9075 * (3/4)) or int(data[3]) < 45:
+            data = clense(data)
+            #print(data)
+            size = len(games) - 1
+            games[size][side][0] += 1
+            if int(data[15]) != 0:
+                games[size][side][1] += 1
+            games[size][side][2] += (int(data[16]))
+            if int(data[19]) != 0:
+                games[size][side][3] += 1
+            games[size][side][5] += (int(data[21]))
+            games[size][side][int(data[5]) + 5 - 1] += 1
+            games[size][side][int(data[20]) + 5 + 15 - 1] += 1
+            games[size][side][int(data[14]) + 5 + 15 + 4 - 1] += 1
 
 print("events, shots made, is goal, assist count, fast break", file = outf, end = ",")
 print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outf, end = ",")
@@ -63,16 +60,36 @@ print("s1,s2,s3,s4", file=outf, end = ",")
 print("sp1,sp2,sp3,sp4,sp5,sp6,sp7,sp8,sp9,sp10,sp11,sp12,sp13", file=outf, end=",")
 print("target Feature", file=outf)
 
+print("events, shots made, is goal, assist count, fast break", file = outft, end = ",")
+print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outft, end = ",")
+print("s1,s2,s3,s4", file=outft, end = ",")
+print("sp1,sp2,sp3,sp4,sp5,sp6,sp7,sp8,sp9,sp10,sp11,sp12,sp13", file=outft, end = ",")
+print("events 2, shots made 2, is goal 2, assist count 2, fast break 2", file=outft, end = ",")
+print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outft, end=",") 
+print("s1,s2,s3,s4", file=outft, end = ",")
+print("sp1,sp2,sp3,sp4,sp5,sp6,sp7,sp8,sp9,sp10,sp11,sp12,sp13", file=outft, end=",")
+print("target Feature", file=outft)
 
-for game in games:
+for i in range(len(games)):
+    game = games[i]
     for t in game:
         try:
             for elem in t:
-                print("{}".format(elem), file=outf, end=",")
+                if i < (9075 * (3/4)):
+                    print("{}".format(elem), file=outf, end=",")
+                else:
+                    print("{}".format(elem), file=outft, end=",")
         except:
-            print("{}".format(t), file=outf, end=",")
-    print("",file=outf)
+            if i < (9075 * (3/4)):
+                print("{}".format(t), file=outf, end=",")
+            else:
+                print("{}".format(t), file=outft, end=",")
+    if i < (9075 * (3/4)):               
+        print("",file=outf)
+    else:
+        print("",file=outft)
 
 inf.close()
 outf.close()
+outft.close()
 
