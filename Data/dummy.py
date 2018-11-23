@@ -8,5 +8,6 @@ print("Number of columns: {}".format(len(header.strip().split(","))))
 
 row = outf.readline()
 print("Number of values in row: {}".format(len(row.strip().split(","))))
+print(row.strip().split(","))
 outf.close()
 	
