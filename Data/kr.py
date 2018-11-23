@@ -14,13 +14,14 @@ inf = open("events.csv", "r", encoding="utf8")
 outf = open("formated.csv", "w+", encoding="utf8")
 outft = open("formatedTesting.csv", "w+", encoding="utf-8")
 games = []
+scores = [0,0]
 previousSet = {}
 inf.readline()
 
 def whichWin(d):
-    if d[0][3] > d[1][3]:
+    if d[0] > d[1]:
         return 1
-    elif d[0][3] == d[1][3]:
+    elif d[0] == d[1]:
         return 2
     return 0
 
@@ -32,8 +33,9 @@ for line in inf:
         size = len(games) - 1
         if not currentSet == previousSet:
             if len(games) != 0:
-                games[size].append(whichWin(games[size]))
+                games[size].append(whichWin(scores))
             games.append([[0 for i in range(5 + 15 + 4 + 13)],[0 for i in range(5 + 15 + 4 + 13)]])
+            scores = [0,0]
             previousSet = currentSet
         if len(games) < (9075 * (3/4)) or int(data[3]) < 45:
             data = clense(data)
@@ -49,6 +51,8 @@ for line in inf:
             games[size][side][int(data[5]) + 5 - 1] += 1
             games[size][side][int(data[20]) + 5 + 15 - 1] += 1
             games[size][side][int(data[14]) + 5 + 15 + 4 - 1] += 1
+        if int(data[19]) != 0:
+            scores[side] += 1
 
 print("events, shots made, is goal, assist count, fast break", file = outf, end = ",")
 print("e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15", file=outf, end = ",")
