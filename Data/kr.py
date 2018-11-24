@@ -37,7 +37,7 @@ for line in inf:
             games.append([[0 for i in range(5 + 15 + 4 + 13)],[0 for i in range(5 + 15 + 4 + 13)]])
             scores = [0,0]
             previousSet = currentSet
-        if len(games) < (9075 * (3/4)) or int(data[3]) < 45:
+        if int(data[3]) < 45:
             data = clense(data)
             #print(data)
             size = len(games) - 1
