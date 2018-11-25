@@ -108,6 +108,12 @@ test_df = pd.read_csv("Data/formatedTesting.csv")
 train_df.columns = [col.strip() for col in df.columns]
 test_df.columns = [col.strip() for col in test_df.columns]
 
+# Delete duplicate columns
+del train_df["e1"]
+del train_df["e1.1"]
+del test_df["e1"]
+del test_df["e1.1"]
+
 ## Split the dataframe into features and labels arrays
 train_features_array = train_df.iloc[:, :-1].values
 train_labels_array = train_df.loc[:, "target Feature"].values
