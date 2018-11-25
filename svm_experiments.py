@@ -118,6 +118,8 @@ test_labels_array = test_df.loc[:, "target Feature"].values
 test_labels_binarized = label_binarize(test_labels_array, classes=[0,1,2])
 
 # Feature selection using chi2 test
+print("##############################################")
+print("Performing feature selection and tuning for SVM with RBF kernel")
 select_k_best = SelectKBest(chi2, k="all")
 select_k_best.fit(train_features_array, train_labels_array)
 
@@ -196,3 +198,65 @@ svm_pipe = Pipeline([
 svm_pipe.fit(train_features_array, train_labels_array)
 
 print("Accuracy score on test set: {:.3f}".format(svm_pipe.score(test_features_array, test_labels_array)))
+print("##############################################")
+print()
+
+# Feature selection and tuning for SVM with linear kernel
+print("Performing feature selection and tuning for SVM with Linear kernel")
+
+# Taken from: https://scikit-learn.org/stable/auto_examples/feature_selection/plot_rfe_with_cross_validation.html#sphx-glr-auto-examples-feature-selection-plot-rfe-with-cross-validation-py
+# Create the RFE object and compute a cross-validated score.
+svc = SVC(kernel="linear")
+normalizer = MinMaxScaler((0, 1))
+normalizer.fit(train_features_array)
+
+rfecv = RFECV(estimator=svc, step=1, cv=StratifiedKFold(5),
+              scoring='accuracy')
+rfecv.fit(normalizer.transform(train_features_array), train_labels_array)
+
+print("Optimal number of features : %d" % rfecv.n_features_)
+
+# Plot number of features VS. cross-validation scores
+plt.figure()
+plt.xlabel("Number of features selected")
+plt.ylabel("Cross validation score (nb of correct classifications)")
+plt.plot(range(1, len(rfecv.grid_scores_) + 1), rfecv.grid_scores_)
+plt.show()
+
+rfe_ranking = pd.DataFrame({"features": train_df.columns[:-1], "rfecv_rank": rfecv.ranking_})
+print("Top 16 features according to RFECV")
+print(rfe_ranking.sort_values("rfecv_rank")[:16])
+
+selected_features = rfecv.transform(normalizer.transform(train_features_array))
+
+
+# Find the best value of C for SVM with Linear kernel
+param_grid = {
+        "C": [1, 2, 3, 4, 5, 10, 50, 100]
+    }
+
+grid = GridSearchCV(SVC(kernel="linear"), cv=5, n_jobs=2, param_grid=param_grid)
+grid.fit(selected_features, train_labels_array)
+
+best_C = grid.best_params_["C"]
+
+print("Cross validation best_accuracy score: {:.3f}".format(grid.best_score_))
+print("Best C: {}".format(best_C))
+
+# Train the SVM on the entire training set using the parameters determined by grid search
+linear_svm = SVC(kernel="linear", C=best_C)
+linear_svm.fit(selected_features, train_labels_array)
+
+selected_test_features = rfecv.transform(normalizer.transform(test_features_array))
+
+print("Accuracy score on test set: {:.3f}".format(linear_svm.score(selected_test_features, test_labels_array)))
+
+feature_coefs_class_0 = rfe_ranking.sort_values("rfecv_rank")[:rfecv.n_features_]
+feature_coefs_class_0 = feature_coefs_class_0.sort_index()
+feature_coefs_class_0["coef"] = linear_svm.coef_[0]
+feature_coefs_class_0["abs_coef"] = feature_coefs_class_0["coef"].abs()
+
+print("Coefficients assigned to features sorted by absolute values")
+print(feature_coefs_class_0.sort_values("abs_coef", ascending=False))
+print("##############################################")
+
