@@ -3,8 +3,11 @@ import numpy as np
 import seaborn as sns
 from sklearn.svm import SVC
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.feature_selection import RFECV, chi2, SelectKBest
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler, label_binarize
-from sklearn.metrics import precision_score, recall_score, f1_score, precision_recall_curve, average_precision_score, accuracy_score
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, precision_recall_curve, average_precision_score, accuracy_score
 from itertools import cycle
 import matplotlib.pyplot as plt
 
@@ -105,9 +108,7 @@ test_df = pd.read_csv("Data/formatedTesting.csv")
 train_df.columns = [col.strip() for col in df.columns]
 test_df.columns = [col.strip() for col in test_df.columns]
 
-# Split the dataset into arrays of features and target labels
-# Also binarize the label so that it can be used in 
-# One vs Rest SVM
+## Split the dataframe into features and labels arrays
 train_features_array = train_df.iloc[:, :-1].values
 train_labels_array = train_df.loc[:, "target Feature"].values
 train_labels_binarized = label_binarize(train_labels_array, classes=[0,1,2])
@@ -116,14 +117,82 @@ test_features_array = test_df.iloc[:, :-1].values
 test_labels_array = test_df.loc[:, "target Feature"].values
 test_labels_binarized = label_binarize(test_labels_array, classes=[0,1,2])
 
-# Normalize features to the range [0, 1]
-normalizer = MinMaxScaler((0, 1))
-train_features_normalized = normalizer.fit_transform(train_features_array)
-test_features_normalized = normalizer.fit_transform(test_features_array)
+# Feature selection using chi2 test
+select_k_best = SelectKBest(chi2, k="all")
+select_k_best.fit(train_features_array, train_labels_array)
 
-# Baseline SVM with RBF Kernel
-rbf_baseline = OneVsRestClassifier(SVC())
+feature_scores = pd.DataFrame({"feature": train_df.columns[:-1], "chi2_score": select_k_best.scores_,
+                              "p_value": select_k_best.pvalues_})
 
-rbf_baseline.fit(train_features_normalized, train_labels_binarized)
+print("Number of features where p_value < 0.05: {}\n".format(feature_scores[feature_scores["p_value"] < 0.05].shape[0]))
+print("Top 10 features according to chi squared score:")
+print(feature_scores[feature_scores["p_value"] < 0.05].sort_values("chi2_score", ascending=False)[:10])
 
-show_classification_metrics(rbf_baseline, test_features_normalized, test_labels_binarized, 3)
+# Define scorer for grid search
+accuracy_scorer = make_scorer(accuracy_score)
+
+# Run grid search to determine the best number of features and values for hyperparameters
+pipe = Pipeline([
+    # the reduce_dim stage is populated by the param_grid
+    ('reduce_dim', None),
+    ('normalize', MinMaxScaler((0,1))),
+    ('classify', SVC(kernel="rbf"))
+])
+
+N_FEATURES_OPTIONS = [10, 20, 30, 40]
+C_OPTIONS = [1, 5, 10, 50, 100]
+GAMMA_OPTIONS = [0.01, 0.05, 0.001, 0.005]
+param_grid = [
+    {
+        'reduce_dim': [SelectKBest(chi2)],
+        'reduce_dim__k': N_FEATURES_OPTIONS,
+        'classify__C': C_OPTIONS,
+        'classify__gamma': GAMMA_OPTIONS
+    },
+]
+reducer_labels = ['KBest(chi2)']
+
+grid = GridSearchCV(pipe, cv=5, n_jobs=2, param_grid=param_grid)
+grid.fit(train_features_array, train_labels_array)
+
+n_features = grid.best_params_["reduce_dim__k"]
+best_C = grid.best_params_["classify__C"]
+best_gamma = grid.best_params_["classify__gamma"]
+
+print("Cross validation best_accuracy score: {:.3f}".format(grid.best_score_))
+print("Best C: {}".format(best_C))
+print("Best gamma: {}".format(best_gamma))
+print("Best number of features: {}".format(n_features))
+print("Features selected:")
+print(feature_scores[feature_scores["p_value"] < 0.05].sort_values("chi2_score", ascending=False)[:n_features])
+
+# Taken from: https://scikit-learn.org/stable/auto_examples/compose/plot_compare_reduction.html#sphx-glr-auto-examples-compose-plot-compare-reduction-py
+mean_scores = np.array(grid.cv_results_['mean_test_score'])
+mean_scores = mean_scores.reshape(len(C_OPTIONS), len(GAMMA_OPTIONS), len(N_FEATURES_OPTIONS))
+mean_scores = mean_scores.max(axis=(0,1))
+
+bar_offsets = (np.arange(len(N_FEATURES_OPTIONS)) * (len(reducer_labels) + 1) + .5)
+
+plt.figure()
+COLORS = 'bgrcmyk'
+for i, (label, reducer_scores) in enumerate(zip(reducer_labels, mean_scores)):
+    plt.bar(bar_offsets + i, reducer_scores, label=label, color=COLORS[i])
+
+plt.title("Comparing feature selection for SVM RBF")
+plt.xlabel('Reduced number of features')
+plt.xticks(bar_offsets, N_FEATURES_OPTIONS)
+plt.ylabel('Classification accuracy')
+plt.ylim((0, 1))
+
+plt.show()
+
+# Train the SVM on the entire training set using the parameters determined by grid search
+svm_pipe = Pipeline([
+    ('reduce_dim', SelectKBest(chi2, k=n_features)),
+    ('normalize', MinMaxScaler((0,1))),
+    ('classify', SVC(kernel="rbf", C=best_C, gamma=best_gamma))
+])
+
+svm_pipe.fit(train_features_array, train_labels_array)
+
+print("Accuracy score on test set: {:.3f}".format(svm_pipe.score(test_features_array, test_labels_array)))
